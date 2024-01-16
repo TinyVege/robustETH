@@ -18,6 +18,7 @@ def share(secret: int, n: int, t: int) -> Tuple[List[int], List[PointG1]]:
     """ computes n shares of a given secret such that at least t shares are required for recovery of the secret
         additionally returns the public_coefficients used to verify the validity of the shares
     """
+    # coefficients是小ci0,ci1,……,cit
     coefficients = [secret] + [hash_to_scalar(f"vss:coefficient:{secret}:{j}") for j in range(1, t)]            # n = 4, t = 3 : at least 3 shares
 
     def f(x):   # x = id

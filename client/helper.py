@@ -1,6 +1,5 @@
 from web3 import Web3
-from contract import bytecode, abi, private_keys
-from hexbytes import HexBytes
+from contractInfo import private_keys
 import time
 
 

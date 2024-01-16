@@ -1,5 +1,5 @@
 from bls import *
-import ethFunction
+import stakingPoolFunctions
 from threading import Thread
 import time
 
@@ -50,6 +50,15 @@ encrypt_sharesAllTx = [                      # n * n-1 = 4 * 3 ： 每个人都�
 ]        
 
 
+#3. submitDispute
+# 生成shared_key_proofs
+# shared_key_proofs = []          #len = 4
+# for i, publicKey in enumerate(nodePublicKeys):
+#     shared_key_proofs.append(vss.shared_key_proof(secret, publicKey))
+#     if i == nodeId:
+#         print(f"*shared_key_proof{i} = {shared_key_proofs[i]}")
+#     else:
+#         print(f"shared_key_proof{i} = {shared_key_proofs[i]}")
 
         
 
@@ -135,7 +144,7 @@ signature_normalExit = aggregate(sigs_normalExit)
 
 
 ############## slashExit
-slashContents = [[1],[1000]]            # slashContents
+slashContents = [[1],[1000]]            # slashContents，就是对于两个不同的值进行投票v与v'
 
 
 hexslashContents1 = keccak_256(
@@ -246,12 +255,12 @@ print(h1gpkjs)
 ####################################################################################################
 
 print("deployment正在进行***************************")       # deployment gas_used = 4723256
-ethFunction.deployment()          # 先部署然后再测时间
+stakingPoolFunctions.deployment()          # 先部署然后再测时间
 
 
 print("register正在进行***************************")         # register gas_used = 236742
 for i in range(4):
-    worker = Thread(target=ethFunction.register, 
+    worker = Thread(target=stakingPoolFunctions.register, 
                     args=(i, 
                           clusterSize, 
                           [nodePublicKeys[i][0], 
@@ -267,7 +276,7 @@ print()
 
 print("distributeShares正在进行***************************")
 for i in range(clusterSize):
-    worker = Thread(target=ethFunction.distributeShares, 
+    worker = Thread(target=stakingPoolFunctions.distributeShares, 
                     args=(i, 
                           nodePublicKeys[i][0], 
                           encrypt_sharesAllTx[i], 
@@ -283,7 +292,7 @@ print()
 
 print("submitKeyShare正在进行***************************")
 for i in range(4):
-    worker = Thread(target=ethFunction.submitKeyShare, 
+    worker = Thread(target=stakingPoolFunctions.submitKeyShare, 
                     args=(i,
             nodePublicKeys[i][0],
             h1sis[i],             
@@ -299,7 +308,7 @@ print()
     
 
 print("submitMasterPublicKey 正在进行***************************")
-ethFunction.submitMasterPublicKey(listIdx= 0, publicKeyX = nodePublicKeys[0][0], masterPublicKey=masterPublicKey)
+stakingPoolFunctions.submitMasterPublicKey(listIdx= 0, publicKeyX = nodePublicKeys[0][0], masterPublicKey=masterPublicKey)
 
 
 time.sleep(40)
@@ -309,7 +318,7 @@ print()
 
 print("submitGpkj 正在进行***************************")
 for i in range(4):
-    worker = Thread(target=ethFunction.submitGpkj, 
+    worker = Thread(target=stakingPoolFunctions.submitGpkj, 
                     args=(
         nodePublicKeys[i][0], 
         i,
@@ -328,7 +337,7 @@ print()
 
 
 print("depositToGoerli 正在进行***************************")
-ethFunction.depositToGoerli(
+stakingPoolFunctions.depositToGoerli(
         listIdx=0,                           
         publicKeyX = nodePublicKeys[0][0],
         signature=signature_deposit,              
@@ -347,7 +356,7 @@ print()
 # # print(f'publicKeyX = {nodePublicKeys[0][0]},
 #     # balanceInfo = {balanceInfo},              
 #     # signature = {signature_normalExit}')
-# # ethFunction.normalExit(
+# # stakingPoolFunctions.normalExit(
 # #         publicKeyX = nodePublicKeys[0][0], 
 # #         balanceInfo=balanceInfo,
 # #         signature=signature_normalExit)
@@ -355,7 +364,7 @@ print()
 
 
 print("slashExit 正在进行***************************")     # slashExit gas_used = 
-ethFunction.slashExit(
+stakingPoolFunctions.slashExit(
     listIdx=0,
     publicKeyX=nodePublicKeys[0][0],
     slashContents=slashContents,
@@ -367,7 +376,7 @@ ethFunction.slashExit(
     balanceInfoSignature=balanceInfoSignature)
 
 # print("laggingExit 正在进行***************************")     # slashExit gas_used = 
-# ethFunction.laggingTrigExit(
+# stakingPoolFunctions.laggingTrigExit(
 #     listIdx=0,
 #     publicKeyX=nodePublicKeys[0][0],
 #     exitInfo=exitInfo,

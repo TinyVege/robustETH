@@ -1,11 +1,13 @@
 from bls import *
 import ethFunction
+import time
+from threading import Thread
 
 ######################################################################################################
 # 构建信息
 ####################################################################################################
-ids = [0,1,2,3,4,5,6]
-clusterSize = 7
+ids = [0,1,2,3,4,5,6,7,8,9,10,11,12]
+clusterSize = 13
 
 # 1. register 创建账户的公私钥对
 secrets = []            #     
@@ -28,7 +30,7 @@ for i in range(clusterSize):
 sharesAll = []                                                            # 4 * 4; 因为包括自己的话是给n个人发
 public_coefficientsAll = []                                               # 4 * 3  
 for secret in secrets:
-    shares, public_coefficients = vss.share(secret, n = 7, t = 5)           #vss.share只提供预定义的id，没有设置用户自定义id
+    shares, public_coefficients = vss.share(secret, n = 13, t = 10)           #vss.share只提供预定义的id，没有设置用户自定义id
     sharesAll.append(shares)
     public_coefficientsAll.append(public_coefficients)
 
@@ -45,16 +47,6 @@ encrypt_sharesAllTx = [                      # n * n-1 = 4 * 3 ： 每个人都�
 ]        
 
 
-#3. submitDispute
-# 生成shared_key_proofs
-# shared_key_proofs = []          #len = 4
-# for i, publicKey in enumerate(nodePublicKeys):
-#     shared_key_proofs.append(vss.shared_key_proof(secret, publicKey))
-#     if i == nodeId:
-#         print(f"*shared_key_proof{i} = {shared_key_proofs[i]}")
-#     else:
-#         print(f"shared_key_proof{i} = {shared_key_proofs[i]}")
-        
 
 #4. submit_key_share
 # DLEQ
@@ -112,31 +104,13 @@ msg = 'depositToGoerli'
 depositMessage = hash_to_G1(msg)
 
 sigs_deposit = []
-for i in range(5):          # i = 0 有问题，无法聚合
+for i in range(10):          # i = 0 有问题，无法聚合
     sig = sign(gskjs[i+1], msg)
     sigs_deposit.append((i+1, sig))
 signature_deposit = aggregate(sigs_deposit)
 
 
 
-############# normalExit
-balanceInfo = [2,2,2,2,2,2,2]
-hex1 = keccak_256(
-            abi_types = ['uint8[]'],
-            values = [balanceInfo]) 
-x1 = int.from_bytes(hex1, "big") % CURVE_ORDER 
-msgP = multiply(G1, x1)
-
-sigs_normalExit =[]
-for i in range(5):
-    sig = my_sign(gskjs[i+1], msgP)
-    sigs_normalExit.append((i+1, sig))
-signature_normalExit = aggregate(sigs_normalExit)
-
-
-
-
-    
 
 ######################################################################################################
 # 交易
@@ -146,64 +120,118 @@ print("deployment正在进行***************************")       # deployment ga
 ethFunction.deployment()     
 
 
+#初始区块与时间
+time_start = time.time()
+print(f'开始时间为 : {time_start}')
+
+
 print("register正在进行***************************")         # register gas_used = 236742
-for i in range(7):
-    print(f"node{i}正在进行注册，请稍后")
-    ethFunction.register(clusterSize, [nodePublicKeys[i][0], nodePublicKeys[i][1]])
+for i in range(clusterSize):
+    worker = Thread(target=ethFunction.register, 
+                    args=(i, 
+                          clusterSize, 
+                          [nodePublicKeys[i][0], 
+                           nodePublicKeys[i][1]]), 
+                    daemon=False)
+    worker.start()
+
+
+current_block_number = ethFunction.get_latest_block_number()
+print(f'当前区块号是 : {current_block_number}')
+ethFunction.log_loop(current_block_number, 12)
+print(f'registration phase 结束')
+print()
 
 
 print("distributeShares正在进行***************************")
 # test_list = [list(item) for item in test]
 
 for i in range(clusterSize):
-    print(f"node{i}正在进行distributeShares，请稍后")   #distributeShares gas_used = 185536
-    ethFunction.distributeShares(i, nodePublicKeys[i][0], encrypt_sharesAllTx[i], public_coefficientsAll[i])        
+    worker = Thread(target=ethFunction.distributeShares, 
+                    args=(i, 
+                          nodePublicKeys[i][0], 
+                          encrypt_sharesAllTx[i], 
+                          public_coefficientsAll[i]), 
+                    daemon=False)
+    worker.start()
 
+
+
+current_block_number = ethFunction.get_latest_block_number()
+print(f'当前区块号是 : {current_block_number}')
+ethFunction.log_loop(current_block_number, 12)
+print(f'distributeShares phase 结束')
+print()
 
 
 print("submitKeyShare正在进行***************************")
-for i in range(7):
-    print(f"node{i}正在进行submitKeyShare，请稍后")   #submitKeyShare gas_used = 273369
-    ethFunction.submitKeyShare(
-            listIdx = i,
-            publicKeyX = nodePublicKeys[i][0],
-            keyShareG1 = h1sis[i],             
-            keyShareG1CorrectnessProof = [cs[i], rs[i]],
-            keyShareG2 = h2sis[i])
+for i in range(clusterSize):
+    worker = Thread(target=ethFunction.submitKeyShare, 
+                    args=(i,
+            nodePublicKeys[i][0],
+            h1sis[i],             
+            [cs[i], rs[i]],
+            h2sis[i]), 
+            daemon=False)
+    worker.start()   
+
+
+current_block_number = ethFunction.get_latest_block_number()
+print(f'当前区块号是 : {current_block_number}')
+ethFunction.log_loop(current_block_number, 12)
+print(f'submitKeyShare phase 结束')
+print()
     
 
 print("submitMasterPublicKey 正在进行***************************")
-print(f"node0 正在进行 submitMasterPublicKey ，请稍后")   #submitMasterPublicKey gas_used = 355322
-ethFunction.submitMasterPublicKey(publicKeyX = nodePublicKeys[0][0], masterPublicKey=masterPublicKey)
-    
+ethFunction.submitMasterPublicKey(listIdx= 0, publicKeyX = nodePublicKeys[0][0], masterPublicKey=masterPublicKey)
+
+
+current_block_number = ethFunction.get_latest_block_number()
+print(f'当前区块号是 : {current_block_number}')
+ethFunction.log_loop(current_block_number, 12)
+print(f'submitMasterPublicKey phase 结束')
+print()
 
 
 print("submitGpkj 正在进行***************************")
-for i in range(7):
-    print(f"node{i}正在进行 submitGpkj ，请稍后")   #submitGpkj gas_used = 430549
-    ethFunction.submitGpkj(
-        publicKeyX=nodePublicKeys[i][0], 
-        listIdx=i,
-        ggskj=ggskjs[i],
-        encrypted_sharesQ=encrypt_sharesAllTx,
-        commitmentsQ=public_coefficientsAll,
-        h1gpkj=h1gpkjs[i],
-        h1gpkjCorrectnessProof=[csgpkj[i], rsgpkj[i]],
-        h2gpkj=h2gpkjs[i]
-        )
+for i in range(clusterSize):
+    worker = Thread(target=ethFunction.submitGpkj, 
+                    args=(
+        nodePublicKeys[i][0], 
+        i,
+        ggskjs[i],
+        encrypt_sharesAllTx,
+        public_coefficientsAll,
+        h1gpkjs[i],
+        [csgpkj[i], rsgpkj[i]],
+        h2gpkjs[i]), 
+            daemon=False)
+    worker.start() 
+
+current_block_number = ethFunction.get_latest_block_number()
+print(f'当前区块号是 : {current_block_number}')
+ethFunction.log_loop(current_block_number, 12)
+print(f'submitGpkj phase 结束')
+print()
+
 
 print("depositToGoerli 正在进行***************************")
-print(f"node0 正在进行 depositToGoerli ，请稍后")                   # depositMessage gas_used = 529106
-ethFunction.depositToGoerli(                           
+ethFunction.depositToGoerli(
+        listIdx=0,                           
         publicKeyX = nodePublicKeys[0][0],
         signature=signature_deposit,              
         depositMessage=depositMessage     
         )
 
+current_block_number = ethFunction.get_latest_block_number()
+print(f'当前区块号是 : {current_block_number}')
+ethFunction.log_loop(current_block_number, 12)
+print(f'depositToGoerli phase 结束')
+print()
 
-print("normalExit 正在进行***************************")     # normalExit gas_used = 200810
-print(f"node0 正在进行 normalExit ，请稍后")  
-ethFunction.normalExit(
-        publicKeyX = nodePublicKeys[0][0], 
-        balanceInfo=balanceInfo,
-        signature=signature_normalExit)
+
+time_end = time.time()
+print(f'结束时间为 : {time_end}')
+    
+print(f'持续时间为 : {time_end - time_start}')

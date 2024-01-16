@@ -1,6 +1,6 @@
 from typing import Any, List, Tuple
 
-from crypto import (
+from .crypto import (
     G1,
     G2,
     H1,
@@ -58,6 +58,8 @@ def keygen2(seed=None):
 def sign(sk: int, message: Any) -> PointG1:
     return multiply(hash_to_G1(message), sk)
 
+# my_sign是为了解决sign中hash_to_G1中的map_to_G1（将msg转换为bytes再转换为G1上的点）过于复杂，
+# 而无法在智能合约上实现的问题
 def my_sign(sk: int, p: PointG1) -> PointG1:
     return multiply(p, sk)
 

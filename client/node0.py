@@ -26,6 +26,7 @@ for i, publicKey in enumerate(nodePublicKeys):
     else :
         print(f"shared_key[{i}] = {shared_key[i]}")
 
+# shares.len = 4, public_coefficients.len = 3
 shares, public_coefficients = vss.share(secret, n = 4, t = 3)           #vss.share只提供预定义的id，没有设置用户自定义id
 for i, share in enumerate(shares):
     if i == nodeId :
@@ -39,9 +40,8 @@ for i, public_coefficient in enumerate(public_coefficients):
 
 # 生成encrypt_shares
 encrypt_share = []           # len = 4
-
 for id in ids:
-    encrypt_share.append(vss.encrypt_share(shares[id], id, shared_key[id]))
+    encrypt_share.append(vss.encrypt_share(share=shares[id], receiver_id=id, shared_key=shared_key[id]))
     if id == nodeId:
         print(f"*encrypt_share{nodeId}-> {id} = {encrypt_share[id]}")
     else :
